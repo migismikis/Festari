@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>FestariCall v1.1</title>
+<style>
+:root{
+  --bg:#07111f; --panel:#101827; --card:#172033; --text:#f8fafc; --muted:#a7b3c7;
+  --green:#16a34a; --blue:#2563eb; --purple:#7c3aed; --red:#dc2626; --orange:#f97316; --gray:#475569;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{position:sticky;top:0;z-index:10;background:#020617;padding:14px;border-bottom:1px solid #223047}
+h1{margin:0;font-size:24px}
+small{color:var(--muted)}
+main{max-width:960px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid #26344d;border-radius:16px;padding:14px;margin:10px 0}
+button,input{font-size:16px;border:0;border-radius:12px;padding:12px}
+button{font-weight:800;color:white;background:var(--gray)}
+input{width:100%;background:#e5e7eb;color:#111827}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hidden{display:none!important}
+.primary{background:var(--green)} .blue{background:var(--blue)} .purple{background:var(--purple)} .red{background:var(--red)} .orange{background:var(--orange)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:10px}
+.groupTitle{font-size:18px;margin:22px 0 8px;color:#d8e2f2;font-weight:900}
+.product{min-height:95px;font-size:18px;line-height:1.2;background:var(--green);position:relative}
+.product.pending{background:var(--orange)}
+.product.urgent{background:var(--red)}
+.badge{position:absolute;right:8px;top:8px;background:#020617;padding:4px 8px;border-radius:999px;font-size:13px}
+.request{border-left:8px solid var(--green)}
+.request.ack{border-left-color:var(--blue);background:#102a55}
+.request.pick{border-left-color:var(--purple);background:#281451}
+.request.urgent{border-left-color:var(--red)}
+.request.old{box-shadow:0 0 0 2px var(--orange)}
+.big{font-size:23px;font-weight:900}
+.meta{color:#d8e2f2;font-size:14px;margin-top:5px}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.notice{background:#0f1d33;border:1px solid #26344d;border-radius:12px;padding:10px;margin:8px 0;color:#d8e2f2}
+hr{border:0;border-top:1px solid #334155;margin:16px 0}
+.statsGrid{display:grid;grid-template-columns:1fr auto;gap:8px}
+.low{color:#fb7185;font-weight:900}
+</style>
+</head>
+<body>
+<header>
+  <h1>🍔 FestariCall v1.1</h1>
+  <small id="status">Käynnistyy...</small>
+</header>
+
+<main>
+<section id="setup" class="card">
+  <h2>Aloitus</h2>
+  <p>Kirjoita nimi ja valitse rooli. Tämä tallentuu tähän puhelimeen.</p>
+  <input id="nameInput" placeholder="Nimi, esim. Mikko">
+  <div class="row" style="margin-top:10px">
+    <button class="primary" onclick="saveRole('sales')">🍔 Myyntipiste</button>
+    <button class="blue" onclick="saveRole('kitchen')">👨‍🍳 Keittiö</button>
+  </div>
+</section>
+
+<section id="topbar" class="card hidden">
+  <div class="row">
+    <b id="who"></b>
+    <button onclick="changeUser()">Vaihda nimeä/roolia</button>
+    <button onclick="toggleSound()">Ääni: <span id="soundState">ON</span></button>
+  </div>
+  <div class="notice">Normaali painallus lähettää pyynnön. Pitkä painallus noin 1 s tekee 🚨 kiireellisen pyynnön.</div>
+</section>
+
+<section id="sales" class="hidden">
+  <div id="productGroups"></div>
+</section>
+
+<section id="kitchen" class="hidden">
+  <h2>👨‍🍳 Saapuvat pyynnöt</h2>
+  <div id="requests"></div>
+  <hr>
+  <h2>📦 Varastomäärät</h2>
+  <div class="notice">Aseta määrät vapaasti. Esim. GN-astioita, laatikoita tai annosmääriä.</div>
+  <div id="stock"></div>
+  <hr>
+  <h2>📈 Päivän tilastot</h2>
+  <div id="stats"></div>
+</section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, enableIndexedDbPersistence, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBbPAS__KYZ911xs9Q77a7wxfX1FWVKPyI",
+  authDomain: "kutsut-8e30a.firebaseapp.com",
+  projectId: "kutsut-8e30a",
+  storageBucket: "kutsut-8e30a.firebasestorage.app",
+  messagingSenderId: "218193499800",
+  appId: "1:218193499800:web:4c53bcc5951c238ed862ed",
+  measurementId: "G-M44QZKKX58"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+enableIndexedDbPersistence(db).catch(()=>{});
+
+const products = [
+ {g:"Liha",e:"🥩",n:"Pastrami"},
+ {g:"Liha",e:"🐔",n:"Kana"},
+ {g:"Lisukkeet",e:"🥬",n:"Punakaali"},
+ {g:"Lisukkeet",e:"🌿",n:"Fenkoli"},
+ {g:"Lisukkeet",e:"🌱",n:"Herneenverso"},
+ {g:"Lisukkeet",e:"🥦",n:"Lämmin kasvis"},
+ {g:"Lisukkeet",e:"🧅",n:"Kevätsipuli"},
+ {g:"Lisukkeet",e:"🎃",n:"Kurpitsasalaatti"},
+ {g:"Kastikkeet",e:"🍅",n:"Salsa"},
+ {g:"Kastikkeet",e:"🥣",n:"Kanankastike"},
+ {g:"Muut",e:"🍚",n:"Riisi"},
+ {g:"Muut",e:"🫘",n:"Kikherne"},
+ {g:"Muut",e:"🥔",n:"Peruna"},
+ {g:"Muut",e:"🥒",n:"Kurkku"},
+ {g:"Muut",e:"🥗",n:"Salaattipohja"},
+ {g:"Muut",e:"🥬",n:"Vinegrettisalaatti"}
+];
+
+let current = {
+ name: localStorage.getItem("fc_name") || "",
+ role: localStorage.getItem("fc_role") || "",
+ sound: localStorage.getItem("fc_sound") !== "off"
+};
+let allRequests = [];
+let stock = {};
+let statsRows = [];
+let lastOpenCount = 0;
+
+window.saveRole = function(role){
+ const name = document.getElementById("nameInput").value.trim();
+ if(!name){ alert("Kirjoita nimi ensin."); return; }
+ localStorage.setItem("fc_name", name);
+ localStorage.setItem("fc_role", role);
+ current.name = name;
+ current.role = role;
+ boot();
+};
+
+window.changeUser = function(){
+ localStorage.removeItem("fc_name");
+ localStorage.removeItem("fc_role");
+ location.reload();
+};
+
+window.toggleSound = function(){
+ current.sound = !current.sound;
+ localStorage.setItem("fc_sound", current.sound ? "on" : "off");
+ document.getElementById("soundState").textContent = current.sound ? "ON" : "OFF";
+};
+
+function boot(){
+ document.getElementById("nameInput").value = current.name;
+ if(!current.name || !current.role){
+   document.getElementById("setup").classList.remove("hidden");
+   return;
+ }
+ document.getElementById("setup").classList.add("hidden");
+ document.getElementById("topbar").classList.remove("hidden");
+ document.getElementById("who").textContent = current.name + " • " + (current.role === "sales" ? "Myyntipiste" : "Keittiö");
+ document.getElementById("soundState").textContent = current.sound ? "ON" : "OFF";
+ if(current.role === "sales"){
+   document.getElementById("sales").classList.remove("hidden");
+   renderProducts();
+ }
+ if(current.role === "kitchen"){
+   document.getElementById("kitchen").classList.remove("hidden");
+ }
+ listen();
+}
+
+function beep(urgent=false){
+ if(!current.sound) return;
+ try{
+   const ctx = new (window.AudioContext || window.webkitAudioContext)();
+   const osc = ctx.createOscillator();
+   const gain = ctx.createGain();
+   osc.connect(gain);
+   gain.connect(ctx.destination);
+   osc.frequency.value = urgent ? 980 : 660;
+   gain.gain.value = 0.08;
+   osc.start();
+   setTimeout(()=>{ osc.stop(); ctx.close(); }, urgent ? 360 : 180);
+ } catch(e){}
+ if(navigator.vibrate) navigator.vibrate(urgent ? [250,100,250] : 200);
+}
+
+function renderProducts(){
+ const wrap = document.getElementById("productGroups");
+ wrap.innerHTML = "";
+ const groups = [...new Set(products.map(p=>p.g))];
+ groups.forEach(g=>{
+   const title = document.createElement("div");
+   title.className = "groupTitle";
+   title.textContent = g;
+   wrap.appendChild(title);
+
+   const grid = document.createElement("div");
+   grid.className = "grid";
+   wrap.appendChild(grid);
+
+   products.filter(p=>p.g===g).forEach(p=>{
+     const active = allRequests.filter(r=>r.item===p.n && r.status!=="done").length;
+     const urgent = allRequests.some(r=>r.item===p.n && r.urgent && r.status!=="done");
+     const btn = document.createElement("button");
+     btn.className = "product " + (urgent ? "urgent" : active ? "pending" : "");
+     btn.innerHTML = `${p.e}<br>${p.n}${active ? `<span class="badge">×${active}</span>` : ""}`;
+     let timer = null;
+     let longPress = false;
+     const start = () => {
+       longPress = false;
+       timer = setTimeout(()=>{ longPress = true; sendRequest(p, true); }, 900);
+     };
+     const end = () => {
+       clearTimeout(timer);
+       if(!longPress) sendRequest(p, false);
+     };
+     btn.addEventListener("touchstart", start, {passive:true});
+     btn.addEventListener("touchend", end);
+     btn.addEventListener("mousedown", start);
+     btn.addEventListener("mouseup", end);
+     grid.appendChild(btn);
+   });
+ });
+}
+
+async function sendRequest(p, urgent){
+ await addDoc(collection(db, "requests"), {
+   item:p.n,
+   emoji:p.e,
+   group:p.g,
+   requester:current.name,
+   urgent:urgent,
+   status:"new",
+   createdAt:serverTimestamp(),
+   acknowledgedBy:"",
+   pickedBy:"",
+   doneBy:""
+ });
+ const today = new Date().toISOString().slice(0,10);
+ await setDoc(doc(db, "stats", today + "_" + p.n), {
+   day:today,
+   item:p.n,
+   count: increment(1)
+ }, {merge:true});
+ beep(urgent);
+}
+
+function listen(){
+ onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), snap=>{
+   allRequests = snap.docs.map(d=>({id:d.id, ...d.data()}));
+   document.getElementById("status").textContent = "Yhteydessä • " + new Date().toLocaleTimeString("fi-FI");
+
+   if(current.role === "kitchen"){
+     const openCount = allRequests.filter(r=>r.status !== "done").length;
+     if(openCount > lastOpenCount){
+       const newest = allRequests.find(r=>r.status==="new");
+       beep(newest?.urgent);
+     }
+     lastOpenCount = openCount;
+     renderRequests();
+   }
+   if(current.role === "sales"){
+     renderProducts();
+   }
+ }, err=>{
+   document.getElementById("status").textContent = "Virhe: " + err.message;
+ });
+
+ onSnapshot(collection(db,"stock"), snap=>{
+   stock = {};
+   snap.docs.forEach(d=>stock[d.id]=d.data());
+   if(current.role === "kitchen") renderStock();
+ });
+
+ onSnapshot(collection(db,"stats"), snap=>{
+   statsRows = snap.docs.map(d=>d.data());
+   if(current.role === "kitchen") renderStats();
+ });
+}
+
+function ageText(r){
+ if(!r.createdAt) return "juuri nyt";
+ const ms = Date.now() - r.createdAt.toDate().getTime();
+ const m = Math.floor(ms/60000);
+ const s = Math.floor((ms%60000)/1000);
+ return `${m} min ${s} s`;
+}
+
+function renderRequests(){
+ const el = document.getElementById("requests");
+ const open = allRequests
+   .filter(r=>r.status !== "done")
+   .sort((a,b)=>(Number(b.urgent)-Number(a.urgent)) || ((a.createdAt?.seconds||0)-(b.createdAt?.seconds||0)));
+
+ if(!open.length){
+   el.innerHTML = '<div class="notice">Ei avoimia pyyntöjä.</div>';
+   return;
+ }
+
+ el.innerHTML = "";
+ open.forEach(r=>{
+   const old = r.createdAt && (Date.now() - r.createdAt.toDate().getTime() > 5*60000);
+   const div = document.createElement("div");
+   div.className = `card request ${r.status==="ack"?"ack":""} ${r.status==="pick"?"pick":""} ${r.urgent?"urgent":""} ${old?"old":""}`;
+   const nextText = r.status==="new" ? "Huomioi" : r.status==="ack" ? "Keräilyssä" : "Valmis";
+   const nextClass = r.status==="new" ? "blue" : r.status==="ack" ? "purple" : "primary";
+   div.innerHTML = `
+    <div class="big">${r.urgent ? "🚨 " : ""}${r.emoji||""} ${r.item}</div>
+    <div class="meta">Pyytäjä: <b>${r.requester || "?"}</b></div>
+    <div class="meta">Odotettu: <b>${ageText(r)}</b></div>
+    ${r.acknowledgedBy ? `<div class="meta">Huomioinut: <b>${r.acknowledgedBy}</b></div>` : ""}
+    ${r.pickedBy ? `<div class="meta">Keräilyssä: <b>${r.pickedBy}</b></div>` : ""}
+    <div class="actions">
+      <button class="${nextClass}" onclick="advanceRequest('${r.id}','${r.status}')">${nextText}</button>
+      <button class="orange" onclick="duplicateRequest('${r.id}')">➕ sama</button>
+      <button class="gray" onclick="removeRequest('${r.id}')">Poista</button>
+    </div>
+   `;
+   el.appendChild(div);
+ });
+}
+
+window.advanceRequest = async function(id,status){
+ const ref = doc(db,"requests",id);
+ if(status === "new"){
+   await updateDoc(ref,{status:"ack", acknowledgedBy:current.name, acknowledgedAt:serverTimestamp()});
+ } else if(status === "ack"){
+   await updateDoc(ref,{status:"pick", pickedBy:current.name, pickedAt:serverTimestamp()});
+ } else {
+   const r = allRequests.find(x=>x.id===id);
+   await updateDoc(ref,{status:"done", doneBy:current.name, doneAt:serverTimestamp()});
+   if(r?.item) await setDoc(doc(db,"stock",r.item), {amount: increment(-1)}, {merge:true});
+ }
+};
+
+window.duplicateRequest = async function(id){
+ const r = allRequests.find(x=>x.id===id);
+ if(!r) return;
+ await sendRequest({n:r.item, e:r.emoji, g:r.group || "Muut"}, !!r.urgent);
+};
+
+window.removeRequest = async function(id){
+ if(confirm("Poistetaanko pyyntö?")){
+   await deleteDoc(doc(db,"requests",id));
+ }
+};
+
+function renderStock(){
+ const el = document.getElementById("stock");
+ el.innerHTML = "";
+ products.forEach(p=>{
+   const amount = stock[p.n]?.amount ?? 0;
+   const div = document.createElement("div");
+   div.className = "card";
+   div.innerHTML = `
+    <div class="row">
+      <b>${p.e} ${p.n}</b>
+      <span style="margin-left:auto">Jäljellä: <b class="${amount<=0 ? "low" : ""}">${amount}</b></span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button onclick="stockChange('${p.n}',-1)">−</button>
+      <button onclick="stockChange('${p.n}',1)">+</button>
+      <button onclick="stockSet('${p.n}')">Aseta</button>
+    </div>
+   `;
+   el.appendChild(div);
+ });
+}
+
+window.stockChange = async function(item, delta){
+ await setDoc(doc(db,"stock",item), {amount: increment(delta)}, {merge:true});
+};
+
+window.stockSet = async function(item){
+ const n = prompt("Määrä tuotteelle " + item);
+ if(n === null) return;
+ await setDoc(doc(db,"stock",item), {amount: Number(n) || 0}, {merge:true});
+};
+
+function renderStats(){
+ const today = new Date().toISOString().slice(0,10);
+ const data = statsRows.filter(r=>r.day===today).sort((a,b)=>(b.count||0)-(a.count||0));
+ const el = document.getElementById("stats");
+ if(!data.length){
+   el.innerHTML = '<div class="notice">Ei tilastoja vielä.</div>';
+   return;
+ }
+ el.innerHTML = '<div class="card statsGrid">' + data.map(r=>`<div>${r.item}</div><b>${r.count||0}</b>`).join("") + '</div>';
+}
+
+setInterval(()=>{ if(current.role === "kitchen") renderRequests(); }, 1000);
+boot();
+</script>
+</body>
+</html>
