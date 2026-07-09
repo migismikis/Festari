@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Atria Keittiöbongi</title>
+<style>
+:root{
+  --red:#c8102e;
+  --navy:#101828;
+  --bg:#f2f4f7;
+  --card:#ffffff;
+  --border:#d0d5dd;
+  --text:#101828;
+  --muted:#667085;
+  --green:#12805c;
+  --blue:#175cd3;
+  --danger:#b42318;
+  --amber:#b54708;
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  padding:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  -webkit-tap-highlight-color:transparent;
+}
+header{
+  position:sticky;
+  top:0;
+  z-index:50;
+  background:var(--navy);
+  color:white;
+  box-shadow:0 2px 14px rgba(16,24,40,.22);
+}
+.header-inner{
+  max-width:1100px;
+  margin:0 auto;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{
+  background:var(--red);
+  color:white;
+  font-weight:900;
+  letter-spacing:.8px;
+  border-radius:10px;
+  padding:8px 12px;
+  font-size:20px;
+  line-height:1;
+}
+.app-title{font-weight:900;font-size:20px;white-space:nowrap}
+.mode-pill{
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:800;
+  font-size:16px;
+  white-space:nowrap;
+}
+main{max-width:1100px;margin:0 auto;padding:14px}
+.hidden{display:none!important}
+.panel{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 2px 8px rgba(16,24,40,.06);
+}
+button{
+  border:0;
+  border-radius:14px;
+  padding:16px;
+  min-height:60px;
+  font-size:20px;
+  font-weight:900;
+  cursor:pointer;
+  color:white;
+  background:#344054;
+  user-select:none;
+}
+button:active{transform:scale(.985)}
+.role-grid,.footer-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.btn-sales,.btn-done{background:var(--green)}
+.btn-kitchen,.btn-ack{background:var(--blue)}
+.btn-danger{background:var(--danger)}
+.group-title{
+  margin:18px 0 10px;
+  font-size:18px;
+  font-weight:900;
+  color:var(--navy);
+}
+.product-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+.product{
+  background:var(--card);
+  color:var(--text);
+  border:2px solid var(--border);
+  min-height:96px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  position:relative;
+  box-shadow:0 1px 3px rgba(16,24,40,.08);
+}
+.product .emoji{font-size:30px;line-height:1}
+.product .label{font-size:18px;line-height:1.05}
+.product.waiting{
+  border-color:var(--amber);
+  background:#fff7ed;
+}
+.product.acknowledged{
+  border-color:var(--blue);
+  background:#e8f0ff;
+}
+.evening .product{
+  border-color:#98a2b3;
+  background:#f8fafc;
+}
+.evening .product.waiting{
+  border-color:var(--amber);
+  background:#fff7ed;
+}
+.evening .product.acknowledged{
+  border-color:var(--blue);
+  background:#e8f0ff;
+}
+.badge{
+  position:absolute;
+  top:7px;
+  right:7px;
+  background:var(--amber);
+  color:white;
+  border-radius:999px;
+  padding:4px 8px;
+  font-size:14px;
+  font-weight:900;
+}
+.product.acknowledged .badge{
+  background:var(--blue);
+}
+.undo-wrap{
+  position:sticky;
+  bottom:10px;
+  z-index:30;
+  margin-top:14px;
+}
+.undo{
+  background:#344054;
+  box-shadow:0 8px 24px rgba(16,24,40,.25);
+}
+.kitchen-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+.kitchen-title{font-size:24px;font-weight:900}
+.counter{
+  background:var(--red);
+  color:white;
+  border-radius:999px;
+  padding:8px 13px;
+  font-weight:900;
+  font-size:18px;
+}
+.order-list{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+.order{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-left:12px solid var(--green);
+  border-radius:18px;
+  padding:14px;
+  box-shadow:0 2px 8px rgba(16,24,40,.07);
+}
+.order.ack{
+  border-left-color:var(--blue);
+  background:#e8f0ff;
+}
+.order-name{
+  font-size:32px;
+  font-weight:900;
+  text-transform:uppercase;
+  line-height:1.05;
+  margin-bottom:8px;
+}
+.order-count{
+  font-size:24px;
+  font-weight:900;
+  color:var(--navy);
+  margin-bottom:10px;
+}
+.order-status{
+  display:inline-block;
+  font-size:15px;
+  font-weight:900;
+  color:var(--muted);
+  background:rgba(255,255,255,.72);
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:5px 9px;
+  margin-bottom:12px;
+}
+.order-actions{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:10px;
+}
+.order-actions button{min-height:64px}
+.empty{
+  min-height:55vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-size:34px;
+  font-weight:900;
+  text-align:center;
+}
+.footer-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:14px;
+}
+@media(min-width:720px){
+  .product-grid{grid-template-columns:repeat(4,1fr)}
+  .order-list{grid-template-columns:repeat(2,1fr)}
+  .product{min-height:110px}
+}
+@media(min-width:1020px){
+  .order-list{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="logo">ATRIA</div>
+      <div class="app-title">Keittiöbongi</div>
+    </div>
+    <div class="mode-pill" id="modeText">Valitse tila</div>
+  </div>
+</header>
+
+<main>
+  <section id="roleSelect" class="panel">
+    <div class="role-grid">
+      <button class="btn-sales" onclick="setRole('sales')">Myyntipiste</button>
+      <button class="btn-kitchen" onclick="setRole('kitchen')">Keittiö</button>
+    </div>
+  </section>
+
+  <section id="salesView" class="hidden">
+    <div id="productGroups"></div>
+
+    <div class="undo-wrap">
+      <button id="undoButton" class="undo hidden" onclick="undoLast()">↩ Peru viimeisin pyyntö</button>
+    </div>
+
+    <div class="footer-actions">
+      <button onclick="changeRole()">Vaihda tila</button>
+      <button onclick="location.reload()">Päivitä</button>
+    </div>
+  </section>
+
+  <section id="kitchenView" class="hidden">
+    <div class="kitchen-top">
+      <div class="kitchen-title">Tilaukset</div>
+      <div class="counter" id="openCount">0</div>
+    </div>
+
+    <div id="orders" class="order-list"></div>
+
+    <div class="footer-actions">
+      <button onclick="changeRole()">Vaihda tila</button>
+      <button onclick="location.reload()">Päivitä</button>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  query,
+  orderBy,
+  enableIndexedDbPersistence,
+  writeBatch
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBbPAS__KYZ911xs9Q77a7wxfX1FWVKPyI",
+  authDomain: "kutsut-8e30a.firebaseapp.com",
+  projectId: "kutsut-8e30a",
+  storageBucket: "kutsut-8e30a.firebasestorage.app",
+  messagingSenderId: "218193499800",
+  appId: "1:218193499800:web:4c53bcc5951c238ed862ed",
+  measurementId: "G-M44QZKKX58"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+enableIndexedDbPersistence(db).catch(() => {});
+
+const normalProducts = [
+  {g:"Liha", e:"🥩", n:"Pastrami"},
+  {g:"Liha", e:"🐔", n:"Kana"},
+  {g:"Lisukkeet", e:"🥬", n:"Punakaali"},
+  {g:"Lisukkeet", e:"🌿", n:"Fenkoli"},
+  {g:"Lisukkeet", e:"🌱", n:"Herneenverso"},
+  {g:"Lisukkeet", e:"🥦", n:"Lämmin kasvis"},
+  {g:"Lisukkeet", e:"🧅", n:"Kevätsipuli"},
+  {g:"Lisukkeet", e:"🥒", n:"Tsatsikisalaatti"},
+  {g:"Kastikkeet", e:"🍅", n:"Salsa"},
+  {g:"Kastikkeet", e:"🥣", n:"Kanankastike"},
+  {g:"Muut", e:"🍚", n:"Riisi"},
+  {g:"Muut", e:"🫘", n:"Kikherne"},
+  {g:"Muut", e:"🥔", n:"Peruna"},
+  {g:"Muut", e:"🥒", n:"Kurkku"},
+  {g:"Muut", e:"🥗", n:"Salaattipohja"},
+  {g:"Muut", e:"🥬", n:"Vinegrettisalaatti"}
+];
+
+const eveningProducts = [
+  {g:"Iltamenu", e:"🌭", n:"Makkara", evening:true},
+  {g:"Iltamenu", e:"🥙", n:"Kebabliha", evening:true},
+  {g:"Iltamenu", e:"🥣", n:"Kebabkastike", evening:true},
+  {g:"Iltamenu", e:"🍟", n:"Sipsit", evening:true}
+];
+
+let role = localStorage.getItem("kb_role") || "";
+let allRequests = [];
+let lastRequestId = localStorage.getItem("kb_last_request_id") || "";
+
+window.setRole = function(newRole){
+  role = newRole;
+  localStorage.setItem("kb_role", role);
+  boot();
+};
+
+window.changeRole = function(){
+  localStorage.removeItem("kb_role");
+  localStorage.removeItem("kb_last_request_id");
+  location.reload();
+};
+
+function isEveningMenuActive(){
+  const hour = new Date().getHours();
+  return hour >= 21 || hour < 2;
+}
+
+function getProducts(){
+  return isEveningMenuActive()
+    ? [...eveningProducts, ...normalProducts]
+    : normalProducts;
+}
+
+function boot(){
+  document.getElementById("roleSelect").classList.toggle("hidden", !!role);
+  document.getElementById("salesView").classList.toggle("hidden", role !== "sales");
+  document.getElementById("kitchenView").classList.toggle("hidden", role !== "kitchen");
+
+  document.getElementById("modeText").textContent =
+    role === "sales" ? "Myyntipiste" :
+    role === "kitchen" ? "Keittiö" :
+    "Valitse tila";
+
+  if(role === "sales") renderProducts();
+  listen();
+}
+
+function getProductOpenState(productName){
+  const open = allRequests.filter(r => r.item === productName && r.status !== "done");
+  if(!open.length){
+    return {count:0, state:"none"};
+  }
+
+  const hasNew = open.some(r => r.status === "new");
+  if(hasNew){
+    return {count:open.length, state:"waiting"};
+  }
+
+  return {count:open.length, state:"acknowledged"};
+}
+
+function renderProducts(){
+  const wrap = document.getElementById("productGroups");
+  wrap.innerHTML = "";
+
+  const products = getProducts();
+  const groups = [...new Set(products.map(p => p.g))];
+
+  groups.forEach(group => {
+    const title = document.createElement("div");
+    title.className = "group-title";
+    title.textContent = group;
+    wrap.appendChild(title);
+
+    const grid = document.createElement("div");
+    grid.className = "product-grid " + (group === "Iltamenu" ? "evening" : "");
+    wrap.appendChild(grid);
+
+    products.filter(p => p.g === group).forEach(product => {
+      const status = getProductOpenState(product.n);
+
+      const btn = document.createElement("button");
+      btn.className = "product";
+      if(status.state === "waiting") btn.classList.add("waiting");
+      if(status.state === "acknowledged") btn.classList.add("acknowledged");
+
+      btn.innerHTML = `
+        ${status.count ? `<span class="badge">×${status.count}</span>` : ""}
+        <span class="emoji">${product.e}</span>
+        <span class="label">${product.n}</span>
+      `;
+      btn.onclick = () => sendRequest(product);
+      grid.appendChild(btn);
+    });
+  });
+
+  updateUndoButton();
+}
+
+async function sendRequest(product){
+  const ref = await addDoc(collection(db, "requests"), {
+    item: product.n,
+    emoji: product.e,
+    group: product.g,
+    status: "new",
+    createdAt: serverTimestamp(),
+    acknowledgedAt: null,
+    doneAt: null
+  });
+
+  lastRequestId = ref.id;
+  localStorage.setItem("kb_last_request_id", ref.id);
+  updateUndoButton();
+}
+
+function updateUndoButton(){
+  const btn = document.getElementById("undoButton");
+  if(!btn) return;
+
+  const exists = allRequests.some(r => r.id === lastRequestId && r.status !== "done");
+  btn.classList.toggle("hidden", !(lastRequestId && exists));
+}
+
+window.undoLast = async function(){
+  if(!lastRequestId) return;
+
+  const exists = allRequests.some(r => r.id === lastRequestId && r.status !== "done");
+  if(exists){
+    await deleteDoc(doc(db, "requests", lastRequestId));
+  }
+
+  lastRequestId = "";
+  localStorage.removeItem("kb_last_request_id");
+  updateUndoButton();
+};
+
+function listen(){
+  onSnapshot(query(collection(db, "requests"), orderBy("createdAt", "asc")), snapshot => {
+    allRequests = snapshot.docs.map(d => ({id:d.id, ...d.data()}));
+
+    if(role === "sales") renderProducts();
+    if(role === "kitchen") renderKitchen();
+  }, err => {
+    alert("Yhteysvirhe: " + err.message);
+  });
+}
+
+function getGroupedOpenOrders(){
+  const groups = {};
+
+  allRequests
+    .filter(r => r.status !== "done")
+    .forEach(r => {
+      if(!groups[r.item]){
+        groups[r.item] = {
+          item:r.item,
+          emoji:r.emoji,
+          group:r.group,
+          ids:[],
+          newIds:[],
+          ackIds:[],
+          oldestSeconds:r.createdAt?.seconds || 0
+        };
+      }
+
+      groups[r.item].ids.push(r.id);
+
+      if(r.status === "new"){
+        groups[r.item].newIds.push(r.id);
+      } else {
+        groups[r.item].ackIds.push(r.id);
+      }
+
+      const seconds = r.createdAt?.seconds || 0;
+      if(seconds && (!groups[r.item].oldestSeconds || seconds < groups[r.item].oldestSeconds)){
+        groups[r.item].oldestSeconds = seconds;
+      }
+    });
+
+  return Object.values(groups).sort((a,b) => (a.oldestSeconds || 0) - (b.oldestSeconds || 0));
+}
+
+function renderKitchen(){
+  const grouped = getGroupedOpenOrders();
+  const openCount = allRequests.filter(r => r.status !== "done").length;
+  document.getElementById("openCount").textContent = openCount;
+
+  const wrap = document.getElementById("orders");
+
+  if(!grouped.length){
+    wrap.innerHTML = '<div class="empty">Ei tilauksia</div>';
+    return;
+  }
+
+  wrap.innerHTML = "";
+
+  grouped.forEach(order => {
+    const card = document.createElement("div");
+    const hasNew = order.newIds.length > 0;
+    const isAck = !hasNew;
+    card.className = "order " + (isAck ? "ack" : "");
+
+    const count = order.ids.length;
+    const statusText = isAck ? "HUOMIOITU" : "UUSI";
+    const buttonText = isAck ? "VALMIS" : "HUOMIOITU";
+    const buttonClass = isAck ? "btn-done" : "btn-ack";
+
+    card.innerHTML = `
+      <div class="order-name">${order.emoji || ""} ${order.item}</div>
+      <div class="order-count">Tarvitaan: ${count}</div>
+      <div class="order-status">${statusText}</div>
+      <div class="order-actions">
+        <button class="${buttonClass}" onclick="advanceGroup('${order.item}', '${isAck ? "ack" : "new"}')">${buttonText}</button>
+        <button class="btn-danger" onclick="removeGroup('${order.item}')">Poista</button>
+      </div>
+    `;
+
+    wrap.appendChild(card);
+  });
+}
+
+window.advanceGroup = async function(item, state){
+  const open = allRequests.filter(r => r.item === item && r.status !== "done");
+  if(!open.length) return;
+
+  const batch = writeBatch(db);
+
+  if(state === "new"){
+    open
+      .filter(r => r.status === "new")
+      .forEach(r => {
+        batch.update(doc(db, "requests", r.id), {
+          status: "ack",
+          acknowledgedAt: serverTimestamp()
+        });
+      });
+  } else {
+    open.forEach(r => {
+      batch.update(doc(db, "requests", r.id), {
+        status: "done",
+        doneAt: serverTimestamp()
+      });
+    });
+  }
+
+  await batch.commit();
+};
+
+window.removeGroup = async function(item){
+  const open = allRequests.filter(r => r.item === item && r.status !== "done");
+  if(!open.length) return;
+
+  const batch = writeBatch(db);
+  open.forEach(r => batch.delete(doc(db, "requests", r.id)));
+  await batch.commit();
+};
+
+setInterval(() => {
+  if(role === "sales") renderProducts();
+}, 60000);
+
+boot();
+</script>
+</body>
+</html>
